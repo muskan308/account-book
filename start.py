@@ -17,11 +17,11 @@ k = Fernet(key)
 
 
 def open_a(bank):
-    global var1, var2, var3, var4, var5, var6, var7, root  # will be used globally
+    global var1, var2, var3, var4, var5, var6, var7, root,var8  # will be used globally
     root = Tk(className="Sign In")
     root.geometry("450x500")
-    var1, var2, var3, var5, var6 = StringVar(
-    ), StringVar(), StringVar(), StringVar(), StringVar()
+    var1, var2, var3, var5, var6,var8 = StringVar(
+    ), StringVar(), StringVar(), StringVar(), StringVar(),StringVar()
     var4 = StringVar()
     var7 = bank
     l1 = Label(root, text="Enter your details to Sign - In", font="Algerian")
@@ -49,7 +49,11 @@ def open_a(bank):
                font=('serif', 10)).place(x=30, y=350)
     en5 = Entry(root, width=30, textvariable=var5)
     en5.place(x=200, y=350)
-    bu1 = Button(root, text="Sign In", command=do_entry).place(x=190, y=410)
+    l7 = Label(root, text="Enter Mobile number",
+               font=('serif', 10)).place(x=30, y=400)
+    en6 = Entry(root, width=30, textvariable=var8)
+    en6.place(x=200, y=400)
+    bu1 = Button(root, text="Sign In", command=do_entry).place(x=190, y=450)
     root.mainloop()
 
     # ***********signing in details to mysql************
@@ -59,13 +63,17 @@ def do_entry():
 
     n = bytes(var2.get(), 'utf-8')
     tok = k.encrypt(n)
-    if(var1.get() == "" or var2.get() == "" or var3.get() == "" or var4.get() == "" or var5.get() == "" or var6.get() == ""):
+    if(var1.get() == "" or var2.get() == "" or var3.get() == "" or var4.get() == "" or var5.get() == "" or var6.get() == "" or var8.get()==""):
         messagebox.showerror("Error", "Fill all the details")
     else:
         if(not(len(var4.get()) <= 18 and len(var4.get()) >= 9)):
             messagebox.showerror("Error", "Invalid Account Number")
-        if(var2.get() != var3.get()):
+        elif(var2.get() != var3.get()):
             messagebox.showerror("Error", "Password should match")
+        elif(len(var8.get()) != 10 ):
+            messagebox.showerror("Error","Enter valid mobile number")
+        elif(len(var5.get()) !=11):
+            messagebox.showerror("Error","Enter valid ifsc code")
         else:
             conn = pymysql.connect(
                 host='localhost',
@@ -74,33 +82,85 @@ def do_entry():
                 db='db'
             )
             cur = conn.cursor()
-            sql = 'insert into login values(%s,%s,%s,%s,%s,%s)'
-            val = (var1.get(), tok, var4.get(), var5.get(), var6.get(), var7)
-            cur.execute(sql, val)
-            conn.commit()
-            global m
-            m = 'm'+var4.get()
+            sql1 = 'select * from login'
+            cur.execute(sql1)
+            out = cur.fetchall()
+            for i in out:
+                if(i[2] == var4.get()):
+                    messagebox.showerror("Error","Account number already used")
+                    break
+            else:
+                sql = 'insert into login values(%s,%s,%s,%s,%s,%s,%s)'
+                val = (var1.get(), tok, var4.get(), var5.get(), var6.get(), var7,var8.get())
+                cur.execute(sql, val)
+                conn.commit()
+                global m
+                m = 'm'+var4.get()
 
-            sql2 = 'create table ' + m + \
+                sql2 = 'create table ' + m + \
                 '(date date,time time, type varchar(10),amount int,balance int)'
 
-            cur.execute(sql2)
-            conn.close()
-            if(var7 == "SBI"):
-                sbi()
-            elif(var7 == "PNB"):
-                pnb()
-            elif(var7 == "HDFC"):
-                hdfc()
-            elif(var7 == "COOP"):
-                coop()
-            elif(var7 == "ICIC"):
-                icic()
+                cur.execute(sql2)
+                conn.close()
+                if(var7 == "SBI"):
+                    sbi()
+                elif(var7 == "PNB"):
+                    pnb()
+                elif(var7 == "HDFC"):
+                    hdfc()
+                elif(var7 == "COOP"):
+                    coop()
+                elif(var7 == "ICIC"):
+                    icic()
 
-            messagebox.showinfo("Confirmation", "Signed In successfully")
-            root.destroy()
-            open_b(var6.get())
+                messagebox.showinfo("Confirmation", "Signed In successfully")
+                root.destroy()
+                open_b(var6.get())
 
+
+
+            #***********change mobile number***********
+def change():
+    conn = pymysql.connect(
+        host='localhost',
+        user='root',
+        password='M1s2k3n4@',
+        db='db',
+    )
+    cur = conn.cursor()
+    sql = 'select * from login'
+    cur.execute(sql)
+    output = cur.fetchall()
+    # print(output)
+    for i in output:
+        if vnum1.get() == i[6]:
+            sql2 = 'update login set mobile = %s where mobile = %s'
+            val = (vnum2.get(), vnum1.get())
+            cur.execute(sql2,val)
+            conn.commit()
+            messagebox.showinfo("Confirmation","Number successfully updated")
+            break
+    else:
+        print(vnum1.get())
+        messagebox.showerror("Error","Wrong mobile number entered")
+    conn.close()
+           
+           #************display mobile number change frame************
+
+def num():
+    global vnum1, vnum2
+    vnum1 , vnum2 = StringVar(), StringVar()
+    f = tkinter.Frame(home,bg = '#F36142')
+    f.place(x =  130, y = 330)
+    lb1 = tkinter.Label(f, text = "Old number",bg = '#F36142').grid(row = 0, column=0)
+    en1  = tkinter.Entry(f,bg = '#fff',textvariable = vnum1).grid(row = 0, column=1)
+    lb2 = tkinter.Label(f, text = "New number",bg = '#F36142').grid(row = 1,column=0)
+    en2 = tkinter.Entry(f,bg = '#fff',textvariable = vnum2).grid(row = 1, column=1)
+    f1 = tkinter.Frame(home, bg = '#F36142')
+    f1.place(x = 205, y = 380)
+    but = tkinter.Button(f1, text ="Change",bg = '#fff',command=change).pack(side=TOP)
+
+    
             # *************home page*************
 
 
@@ -113,7 +173,6 @@ def main():
     else:
         pass
 
-
 def open_b(name):
     global home
     home = Tk(className=" Account Book")
@@ -123,16 +182,21 @@ def open_b(name):
                         font=('MS Serif', 15), bg='#fff', width=41, height=3).place(x=0, y=8)
     but3 = tkinter.Button(home, text="Display balance",
                           width=30, height=2, bg="#fff", command=balance)
-    but3.place(x=120, y=210)
+    but3.place(x=120, y=140)
     but4 = tkinter.Button(home, text="Show transaction",
                           width=30, height=2, bg="#fff", command=transaction)
-    but4.place(x=120, y=270)
-    but5 = tkinter.Button(home, text="Log out", bg='white',
+    but4.place(x=120, y=200)
+    but5 = tkinter.Button(home, text="Update Phone number",
+                          width=30, height=2, bg="#fff",command=num)
+    but5.place(x=120, y=260)
+    
+    but6 = tkinter.Button(home, text="Log out", bg='white',
                           width=10, height=1, command=main).place(x=360, y=400)
 
     home.mainloop()
 
-    # ************display balance****************
+
+   # ************display balance****************
 
 
 def balance():
@@ -146,7 +210,10 @@ def balance():
     sql = 'select * from '+m
     cur.execute(sql)
     output = cur.fetchall()
-    messagebox.showinfo("Balance", "Account balance is " + str(output[-1][4]))
+    if(not(output)):
+        messagebox.showinfo("Message","No information to display")
+    else:
+        messagebox.showinfo("Balance", "Account balance is " + str(output[-1][4]))
     conn.close()
 
     # *************show transaction***************
@@ -175,20 +242,25 @@ def transaction():
     sql = 'select * from '+m
     cur.execute(sql)
     output = cur.fetchall()
-
+    if(not(output)):
+        messagebox.showinfo("Message","No transaction to display")
+        tran.destroy()
+    else:
     # fetching transactions using loop
-    count = 100  # y dimension to display label
-    for i in output[-1::-1]:
-        lb1 = tkinter.Label(tran, width=8, text=str(i[0])).place(x=30, y=count)
-        lb1 = tkinter.Label(tran, width=6, text=str(
-            i[1])).place(x=120, y=count)
-        lb1 = tkinter.Label(tran, width=6, text=str(
-            i[2])).place(x=190, y=count)
-        lb1 = tkinter.Label(tran, width=6, text=str(
-            i[3])).place(x=260, y=count)
-        lb1 = tkinter.Label(tran, width=6, text=str(
-            i[4])).place(x=330, y=count)
-        count += 30
+        count = 100  # y dimension to display label
+        for i in output[-1::-1]:
+            # if(count > 370):
+            #     break
+            lb1 = tkinter.Label(tran, width=8, text=str(i[0])).place(x=30, y=count)
+            lb1 = tkinter.Label(tran, width=6, text=str(
+                i[1])).place(x=120, y=count)
+            lb1 = tkinter.Label(tran, width=6, text=str(
+                i[2])).place(x=190, y=count)
+            lb1 = tkinter.Label(tran, width=6, text=str(
+                i[3])).place(x=260, y=count)
+            lb1 = tkinter.Label(tran, width=6, text=str(
+                i[4])).place(x=330, y=count)
+            count += 30
 
     conn.close()
     tran.mainloop()
